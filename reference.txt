@@ -1,0 +1,14 @@
+Справка
+BTC - 100 TH
+ETC - 100 MH
+KAS - 100 MH
+LTC - 100 MH
+DOGE - 100 MH
+DASH - 100 GH
+ZEC - 100 KH
+KDA - 100 TH
+HNS - 1 TH
+CKB - 1 GH
+ALPH - 100 GH
+
+Последняя дата обновления - 25.04.2024
