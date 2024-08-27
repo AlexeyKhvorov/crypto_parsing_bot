@@ -78,7 +78,7 @@ for price_date in list_of_dates:
     list_new = [list_[i:i + 3] for i in range(0, len(list_), 3)]
     print(list_new)
 
-    file_name = 'currency.csv'
+    file_name = 'currency_new.csv'
 
     with open(file_name, mode='w', newline='', encoding="utf-8") as file:
         writer = csv.writer(file)
