@@ -57,7 +57,7 @@ def word_filter(letter):
             '(ИММЕРСИОННОЕ ОХЛАЖДЕНИЕ)' not in letter and
             ('ГТД100' not in letter) and 'WHATSMINER M56S++ 248T 22W' not in letter and
             ('ANTMINER X5' not in letter) and ('SC5' not in letter) and ('DR7' not in letter)
-            and ('BM-S3' not in letter))
+            and ('BM-S3' not in letter) and ('RXD' not in letter))
 
 
 for file, price_date in zip(files, list_of_dates):
@@ -215,7 +215,6 @@ for file, price_date in zip(files, list_of_dates):
     final_df = pre_final_df.drop('source', axis=1)
 
     print(final_df)
-
 
     #
     # # Запись данных в CSV файл
