@@ -17,7 +17,6 @@ def get_usd_to_rub():
 def find_first_two_digits(input_string):
     first_two_digits = None
     next_two_digits_after_dot = None
-
     for i in range(len(input_string) - 1):
         if input_string[i].isdigit() and input_string[i + 1].isdigit():
             first_two_digits = input_string[i:i + 2]
