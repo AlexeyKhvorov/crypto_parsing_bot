@@ -8,13 +8,15 @@ import pymysql
 import pandas as pd
 import os
 import glob
+import re
+from fuzzywuzzy import process
 
 import config
 import data_parsing
 
 
 def find_closest_match(name, name_list):
-    matches = difflib.get_close_matches(name, name_list, n=1, cutoff=0.6)
+    matches = difflib.get_close_matches(name, name_list, n=1, cutoff=0.1)
     if matches:
         return matches[0]
     else:
@@ -82,110 +84,89 @@ for file, price_date in zip(files, list_of_dates):
 
     # Закрываем PDF-файл
     pdf_file.close()
-    print(summary_text)
+    # print(summary_text)
 
     summary_list = summary_text.split('\n')
-    print(summary_list)
-    summary_filtered_list = list(filter(word_filter, summary_list))
+    # print(summary_list)
 
-    summary_filtered_list_without_commas = [i.replace(',', '.') for i in summary_filtered_list]
+    price_list = []
+    characters_list = []
+    num_list = []
+    asic_list = []
 
-    processed_strings = []
-    for s in summary_filtered_list_without_commas:
-        # Убираем лишний правый пробел
-        s = s.rstrip()
+    # Фильтрация элементов
+    for num, item in enumerate(summary_list):
+        if '$' in item and '₽' in item and 'Цена' not in item:
+            price_list.append(item)
+            num_list.append(num - 1)
+        if 'Вт' in item:
+            characters_list.append(item)
 
-        # Разрезаем строку по 'USD'
-        s = s.rsplit('USDT', 1)
+    # print(price_list)
+    # print(characters_list)
 
-        # Разрезаем каждый элемент полученного списка по пробелу
-        s[0] = s[0].split()
+    for num, item in enumerate(summary_list):
+        if num in num_list:
+            asic_list.append(item)
 
-        processed_strings.append(s)
-    print('1', processed_strings, sep='\n')
-    processed_final_strings = []
-    for sublist in processed_strings:
-        processed_final_strings.append(sublist[0])
-    print('2', processed_final_strings, sep='\n')
-    final_list = []
-    for sublist in processed_final_strings:
-        counter = 0
-        for i in reversed(sublist):
-            try:
-                float(i)
-                counter += 1
-            except ValueError:
+    final_price_list = data_parsing.find_max_between_symbols(price_list)
+    # print(final_price_list)
+
+    # print(asic_list)
+
+    concatenated_list = [f"{x} {y} {z}" for x, y, z in zip(asic_list, characters_list, final_price_list)]
+
+    print(concatenated_list)
+
+    final_asic_list = data_parsing.process_elements(concatenated_list)
+
+    print(final_asic_list)
+    asic_name_list = [sublist[0] for sublist in final_asic_list]
+    asic_price_list = [sublist[1] for sublist in final_asic_list]
+
+    # Исходные данные
+    mapping = {'ANTMINER': ['e9', 'hs3', 'k7', 'ka3', 'l7', 'l9', 's19', 's21', 't19', 't21', 'z15', 'al1', 'ks5 '],
+               'ICERIVER': ['ks0', 'ks3m', 'ks5l', 'ks5m', 'al0', 'al3'],
+               'ELPHAPEX': ['dg'],
+               'JASMINER': ['x4', 'x16'],
+               'WHATSMINER': ['m'],
+               'GOLDSHELL': ['al box', 'ka box', 'mini doge', 'e-']}
+
+    # Результирующий список
+    modified_elements = []
+
+    # Проходим по каждому элементу списка
+    for element in asic_name_list:
+        lower_element = element.lower()  # Переводим в нижний регистр
+        added_key = None  # Переменная для хранения добавленного ключа
+
+        # Проверяем каждую пару ключ-значение в словаре
+        for key, values in mapping.items():
+            for value in values:
+                if lower_element.startswith(value):  # Проверяем на совпадение
+                    added_key = key  # Запоминаем ключ
+                    break  # Выходим из внутреннего цикла, если нашли совпадение
+            if added_key:  # Если ключ был найден, выходим из внешнего цикла
                 break
-        if counter == 5:
-            if sublist[2] == '100-C':
-                price = f'{sublist[-2]}{sublist[-1]}'
-                energy_consumption = f'{sublist[-3]}'
-                hash_rate = f'{sublist[-5]}{sublist[-4]}'
-                name = ' '.join(sublist[:-5])
-                final_list += name, hash_rate, energy_consumption, price
-            elif sublist[-4] == sublist[-5]:
-                price = f'{sublist[-2]}{sublist[-1]}'
-                energy_consumption = f'{sublist[-3]}'
-                hash_rate = f'{sublist[-4]}'
-                name = ' '.join(sublist[:-4])
-                final_list += name, hash_rate, energy_consumption, price
-            else:
-                price = f'{sublist[-2]}{sublist[-1]}'
-                energy_consumption = f'{sublist[-4]}{sublist[-3]}'
-                hash_rate = f'{sublist[-5]}'
-                name = ' '.join(sublist[:-5])
-                final_list += name, hash_rate, energy_consumption, price
-        elif counter == 4:
-            if len(sublist[-1]) == 3 and len(sublist[-2]) < 3:
-                price = f'{sublist[-2]}{sublist[-1]}'
-                energy_consumption = f'{sublist[-3]}'
-                hash_rate = f'{sublist[-4]}'
-                name = ' '.join(sublist[:-4])
-                final_list += name, hash_rate, energy_consumption, price
-            elif len(sublist[-1]) == 3 and len(sublist[-2]) == 3:
-                price = f'{sublist[-1]}'
-                energy_consumption = f'{sublist[-3]}{sublist[-2]}'
-                hash_rate = f'{sublist[-4]}'
-                name = ' '.join(sublist[:-4])
-                final_list += name, hash_rate, energy_consumption, price
-        elif counter == 3:
-            price = f'{sublist[-1]}'
-            energy_consumption = f'{sublist[-2]}'
-            hash_rate = f'{sublist[-3]}'
-            name = ' '.join(sublist[:-3])
-            final_list += name, hash_rate, energy_consumption, price
-        elif counter == 6:
-            if ((len(sublist[-2]) == 1 or len(sublist[-2]) == 2) and len(sublist[-4]) == 1 and
-                    (len(sublist[-6]) == 1 or len(sublist[-6]) == 2)):
-                price = f'{sublist[-2]}{sublist[-1]}'
-                energy_consumption = f'{sublist[-4]}{sublist[-3]}'
-                hash_rate = f'{sublist[-6]}{sublist[-5]}'
-                name = ' '.join(sublist[:-6])
-                final_list += name, hash_rate, energy_consumption, price
-        elif counter == 7:
-            if sublist[1] == "EZ":
-                price = f'{sublist[7]}{sublist[8]}'
-                energy_consumption = f'{sublist[5]}{sublist[6]}'
-                hash_rate = f'{sublist[3]}{sublist[4]}'
-                name = ' '.join(sublist[:-6])
-                final_list += name, hash_rate, energy_consumption, price
-            else:
-                price = f'{sublist[-2]}{sublist[-1]}'
-                energy_consumption = f'{sublist[-4]}{sublist[-3]}'
-                hash_rate = f'{sublist[-5]}'
-                name = ' '.join(sublist[:-5])
-                final_list += name, hash_rate, energy_consumption, price
 
-    final_list_new = [final_list[i:i + 4] for i in range(0, len(final_list), 4)]
-    print(final_list_new)
-    super_final_list = []
-    for el in final_list_new:
-        if len(el[-2]) == 1 or len(el[-2]) == 2:
-            super_final_list.append((el[0], el[-2] + el[-1], price_date))
+        # Формируем новый элемент
+        if added_key:
+            modified_elements.append(f"{added_key} {element}")  # Добавляем ключ перед элементом
         else:
-            super_final_list.append((el[0], el[-1], price_date))
-    print(super_final_list)
+            modified_elements.append(element)  # Если совпадений нет, добавляем элемент без изменений
 
+    # Вывод результата
+    print(modified_elements)
+
+    final_modified_elements = []
+
+    for el in modified_elements:
+        final_modified_elements.append(re.sub(r'\s*\(.*?\)\s*', ' ', el).strip())
+
+    final_modified_elements_plus_price = zip(final_modified_elements, asic_price_list)
+    print(final_modified_elements_plus_price)
+
+    #
     # Устанавливаем соединение с базой данных MySQL
     db_connection = pymysql.connect(host=config.host, database=config.database,
                                     user=config.user, password=config.password,
@@ -195,41 +176,79 @@ for file, price_date in zip(files, list_of_dates):
     query = "SELECT * FROM miner_list"
     df_miner_list_full = pd.read_sql(query, db_connection)
     list_of_miners = df_miner_list_full['name'].tolist()
-    summary_list = []
-    # Проходим по списку сотрудников и находим наиболее похожее имя
-    for miner in super_final_list:
-        closest_match = find_closest_match(miner[0], list_of_miners)
-        summary_list.append((miner, closest_match))
-        # print(f'Для {miner} наиболее подходит: {closest_match}')
+    print(list_of_miners)
+    summary_asic_list = []
+    # # Проходим по списку сотрудников и находим наиболее похожее имя
+    # for miner in modified_elements:
+    #     closest_match = find_closest_match(miner[0], list_of_miners)
+    #     summary_asic_list.append((miner, closest_match))
+    #     print(f'Для {miner} наиболее подходит: {closest_match}')
+    #
+    # df_for_merge = pd.DataFrame(summary_asic_list, columns=['source', 'name'])
+    # print(df_for_merge)
 
-    df_for_merge = pd.DataFrame(summary_list, columns=['source', 'name'])
+    for input_element in final_modified_elements_plus_price:
+        best_match = process.extractOne(input_element[0], list_of_miners)
+        print(f"Для {input_element[0]} Наиболее похожий элемент: {best_match[0]}")
+        answer = input("Вы согласны с этим сопоставлением? Y/N: ")
+        if answer == 'Y':
+            summary_asic_list.append((input_element[0], input_element[1], best_match[0]))
+        elif answer == 'N':
+            match = input(f"Введите корректное название для {input_element}: ")
+            summary_asic_list.append((input_element[0], input_element[1], match))
+        else:
+            print("Переход к следующей итерации. Не забудьте потом скорректировать нужные строки в DBeaver")
+            summary_asic_list.append((input_element[0], input_element[1], best_match[0]))
+    print(summary_asic_list)
+    df_for_merge = pd.DataFrame(summary_asic_list, columns=['source', 'price', 'name'])
     print(df_for_merge)
 
-    pre_final_df = pd.merge(df_for_merge, df_miner_list_full, on='name', how='inner', validate="many_to_many")
-    print(pre_final_df.head(100))
+    asic_list_for_price_insert = [
+        'ANTMINER KA3 166T', 'ANTMINER K7 63.5T', 'ANTMINER HS3 9T', 'ANTMINER D9 1770G', 'GOLDSHELL KA BOX PRO',
+        'GOLDSHELL E-AL1M', 'GOLDSHELL AL BOX Ⅱ PLUS', 'GOLDSHELL AL BOX Ⅱ', 'GOLDSHELL E-KA1M',
+        'GOLDSHELL E-DG1M', 'GOLDSHELL AL BOX', 'BOMBAX EZ 100 12500M', 'BOMBAX EZ 100-C 3200M',
+        'BOMBAX EZ 100-C 3800M', 'JASMINER X16-P 5800M', 'JASMINER X16PE-5250M'
+    ]
 
-    # Распаковка кортежей в разные колонки
-    pre_final_df[['old_name', 'price', 'date']] = pre_final_df['source'].apply(lambda x: pd.Series(x))
+    usd_to_rub = data_parsing.get_usd_to_rub()
 
-    # Удаление исходной колонки 'Кортеж'
-    final_df = pre_final_df.drop('source', axis=1)
+    for asic in asic_list_for_price_insert:
+        asic_price = input(f"Введите актуальный прайс для {asic}: ")
+        try:
+            summary_asic_list.append((asic, round((int(asic_price)/usd_to_rub), 0), asic))
+        except ValueError:
+            summary_asic_list.append((asic, 0, asic))
 
+    df_for_merge = pd.DataFrame(summary_asic_list, columns=['source', 'price', 'name'])
+    print(df_for_merge)
+
+    final_df = pd.merge(df_for_merge, df_miner_list_full, on='name', how='inner', validate="many_to_many")
+    print(final_df.head(100))
+
+    final_df['date'] = price_date
     print(final_df)
-
+    # # Распаковка кортежей в разные колонки
+    # pre_final_df[['old_name', 'price', 'date']] = pre_final_df['source'].apply(lambda x: pd.Series(x))
     #
-    # # Запись данных в CSV файл
-    # with open(file_name, mode='w', newline='', encoding='utf-8') as file:
-    #     writer = csv.writer(file)
-    #     writer.writerows(summary_list)
+    # # Удаление исходной колонки 'Кортеж'
+    # final_df = pre_final_df.drop('source', axis=1)
     #
-    # print(f"Таблица успешно создана в файле {file_name}")
-
+    # print(final_df)
+    #
+    # #
+    # # # Запись данных в CSV файл
+    # # with open(file_name, mode='w', newline='', encoding='utf-8') as file:
+    # #     writer = csv.writer(file)
+    # #     writer.writerows(summary_list)
+    # #
+    # # print(f"Таблица успешно создана в файле {file_name}")
+    #
     # Записываем данные из DataFrame в таблицу в базе данных MySQL
     for index, row in final_df.iterrows():
         insert_query = (f"INSERT INTO price_from_shop_new (name, hash_rate, energy_consumption, price, "
                         f"date, old_name)"
                         f"VALUES ('{row['name']}', '{row['hash_rate']}', '{row['energy_consumption']}', '{row['price']}', "
-                        f"'{row['date']}', '{row['old_name']}');")
+                        f"'{row['date']}', '{row['source']}');")
         cursor.execute(insert_query)
 
     # Фиксируем изменения и закрываем соединение с базой данных
