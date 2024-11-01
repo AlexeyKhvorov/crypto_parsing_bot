@@ -96,6 +96,8 @@ for file, price_date in zip(files, list_of_dates):
 
     # Фильтрация элементов
     for num, item in enumerate(summary_list):
+        if 'B ' in item:
+            continue
         if '$' in item and '₽' in item and 'Цена' not in item:
             price_list.append(item)
             num_list.append(num - 1)
