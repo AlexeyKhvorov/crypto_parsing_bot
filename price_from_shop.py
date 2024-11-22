@@ -206,6 +206,15 @@ for file, price_date in zip(files, list_of_dates):
     print(df_for_merge)
 
     asic_list_for_price_insert = [
+        'ANTMINER KA3 166T', 'ANTMINER K7 63.5T', 'ANTMINER HS3 9T', 'ANTMINER D9 1770G', 'BOMBAX EZ 100 12500M'
+        , 'BOMBAX EZ 100-C 3200M',
+        'BOMBAX EZ 100-C 3800M', 'JASMINER X16-P 5800M', 'JASMINER X16PE-5250M',
+        'ANTMINER AL1 15,6T',
+        'AVALON 1326 106T', 'JASMINER X4-Q 1040M', 'ANTMINER S19 90T',
+        'ICERIVER AL3 15 T'
+    ]
+
+    asic_list_for_price_insert_full_reserv = [
         'ANTMINER KA3 166T', 'ANTMINER K7 63.5T', 'ANTMINER HS3 9T', 'ANTMINER D9 1770G', 'GOLDSHELL KA BOX PRO',
         'GOLDSHELL E-AL1M', 'GOLDSHELL AL BOX Ⅱ PLUS', 'GOLDSHELL AL BOX Ⅱ', 'GOLDSHELL E-KA1M',
         'GOLDSHELL E-DG1M', 'GOLDSHELL AL BOX', 'BOMBAX EZ 100 12500M', 'BOMBAX EZ 100-C 3200M',
